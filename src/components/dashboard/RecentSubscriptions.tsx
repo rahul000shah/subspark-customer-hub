@@ -20,8 +20,8 @@ const RecentSubscriptions = ({ subscriptions, isLoading = false }: RecentSubscri
     const expiry = new Date(expiryDate);
     const daysUntilExpiry = Math.floor((expiry.getTime() - now.getTime()) / (1000 * 3600 * 24));
     
-    if (daysUntilExpiry <= 7) return 'warning';
-    return 'success';
+    if (daysUntilExpiry <= 7) return 'secondary';
+    return 'default';
   };
 
   if (isLoading) {
@@ -67,7 +67,7 @@ const RecentSubscriptions = ({ subscriptions, isLoading = false }: RecentSubscri
                     <TableCell className="capitalize">{subscription.type}</TableCell>
                     <TableCell>{format(new Date(subscription.expiryDate), 'MMM dd, yyyy')}</TableCell>
                     <TableCell>
-                      <Badge variant={statusColor as "success" | "warning" | "destructive"}>
+                      <Badge variant={statusColor as "default" | "destructive" | "outline" | "secondary"}>
                         {subscription.status === 'active' 
                           ? `Expires in ${Math.floor((new Date(subscription.expiryDate).getTime() - new Date().getTime()) / (1000 * 3600 * 24))} days` 
                           : 'Expired'}
