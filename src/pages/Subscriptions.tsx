@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Search, Plus, Loader2, Trash2 } from "lucide-react";
+import { Search, Plus, Loader2, Trash2, Pencil } from "lucide-react";
 import { getSubscriptionsWithDetails, deleteSubscription } from "@/services/subscriptionService";
 import { SubscriptionForm } from "@/components/subscriptions/SubscriptionForm";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -12,10 +12,13 @@ import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Subscription, Platform, Customer } from "@/types";
 
 const Subscriptions = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [currentSubscription, setCurrentSubscription] = useState<(Subscription & { platform: Platform; customer: Customer }) | null>(null);
   
   const { data: subscriptions = [], isLoading, refetch } = useQuery({
     queryKey: ['subscriptions'],
@@ -47,6 +50,11 @@ const Subscriptions = () => {
     }
   };
 
+  const handleEdit = (subscription: Subscription & { platform: Platform; customer: Customer }) => {
+    setCurrentSubscription(subscription);
+    setIsEditDialogOpen(true);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -65,7 +73,10 @@ const Subscriptions = () => {
             <DialogHeader>
               <DialogTitle>Add New Subscription</DialogTitle>
             </DialogHeader>
-            <SubscriptionForm onSuccess={() => setIsAddDialogOpen(false)} />
+            <SubscriptionForm onSuccess={() => {
+              setIsAddDialogOpen(false);
+              refetch();
+            }} />
           </DialogContent>
         </Dialog>
       </div>
@@ -112,7 +123,7 @@ const Subscriptions = () => {
                         <TableCell className="font-medium">{subscription.customer.name}</TableCell>
                         <TableCell>{subscription.platform.name}</TableCell>
                         <TableCell className="capitalize">{subscription.type}</TableCell>
-                        <TableCell>${parseFloat(subscription.cost.toString()).toFixed(2)}</TableCell>
+                        <TableCell>₹{parseFloat(subscription.cost.toString()).toFixed(2)}</TableCell>
                         <TableCell>{format(new Date(subscription.expiryDate), "MMM dd, yyyy")}</TableCell>
                         <TableCell>
                           <Badge variant={statusColor}>
@@ -121,7 +132,10 @@ const Subscriptions = () => {
                               : subscription.status.charAt(0).toUpperCase() + subscription.status.slice(1)}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-right">
+                        <TableCell className="text-right flex justify-end space-x-1">
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEdit(subscription)}>
+                            <Pencil className="h-4 w-4" />
+                          </Button>
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
                               <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive">
@@ -163,6 +177,25 @@ const Subscriptions = () => {
           )}
         </CardContent>
       </Card>
+      
+      {/* Edit Subscription Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Edit Subscription</DialogTitle>
+          </DialogHeader>
+          {currentSubscription && (
+            <SubscriptionForm 
+              subscription={currentSubscription}
+              isEditing={true}
+              onSuccess={() => {
+                setIsEditDialogOpen(false);
+                refetch();
+              }} 
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

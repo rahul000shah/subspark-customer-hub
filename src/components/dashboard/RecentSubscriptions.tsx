@@ -45,6 +45,7 @@ const RecentSubscriptions = ({ subscriptions, isLoading = false }: RecentSubscri
               <TableHead>Customer</TableHead>
               <TableHead>Platform</TableHead>
               <TableHead>Type</TableHead>
+              <TableHead>Cost</TableHead>
               <TableHead>Expires</TableHead>
               <TableHead>Status</TableHead>
             </TableRow>
@@ -52,24 +53,26 @@ const RecentSubscriptions = ({ subscriptions, isLoading = false }: RecentSubscri
           <TableBody>
             {subscriptions.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                   No recent subscriptions found
                 </TableCell>
               </TableRow>
             ) : (
               subscriptions.map((subscription) => {
                 const statusColor = getStatusColor(subscription.status, subscription.expiryDate);
+                const daysUntilExpiry = Math.floor((new Date(subscription.expiryDate).getTime() - new Date().getTime()) / (1000 * 3600 * 24));
                 
                 return (
                   <TableRow key={subscription.id}>
                     <TableCell>{subscription.customer.name}</TableCell>
                     <TableCell>{subscription.platform.name}</TableCell>
                     <TableCell className="capitalize">{subscription.type}</TableCell>
+                    <TableCell>₹{parseFloat(subscription.cost.toString()).toFixed(2)}</TableCell>
                     <TableCell>{format(new Date(subscription.expiryDate), 'MMM dd, yyyy')}</TableCell>
                     <TableCell>
                       <Badge variant={statusColor as "default" | "destructive" | "outline" | "secondary"}>
                         {subscription.status === 'active' 
-                          ? `Expires in ${Math.floor((new Date(subscription.expiryDate).getTime() - new Date().getTime()) / (1000 * 3600 * 24))} days` 
+                          ? `Expires in ${daysUntilExpiry} days` 
                           : 'Expired'}
                       </Badge>
                     </TableCell>

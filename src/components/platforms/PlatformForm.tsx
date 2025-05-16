@@ -6,9 +6,10 @@ import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { addPlatform } from "@/services/platformService";
+import { addPlatform, updatePlatform } from "@/services/platformService";
 import { useQueryClient } from "@tanstack/react-query";
 import { Textarea } from "@/components/ui/textarea";
+import { Platform } from "@/types";
 
 const platformSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters" }),
@@ -19,18 +20,20 @@ const platformSchema = z.object({
 type PlatformFormValues = z.infer<typeof platformSchema>;
 
 type PlatformFormProps = {
+  platform?: Platform;
+  isEditing?: boolean;
   onSuccess?: () => void;
 };
 
-export function PlatformForm({ onSuccess }: PlatformFormProps) {
+export function PlatformForm({ platform, isEditing = false, onSuccess }: PlatformFormProps) {
   const queryClient = useQueryClient();
   
   const form = useForm<PlatformFormValues>({
     resolver: zodResolver(platformSchema),
     defaultValues: {
-      name: "",
-      description: "",
-      logoUrl: "",
+      name: platform?.name || "",
+      description: platform?.description || "",
+      logoUrl: platform?.logoUrl || "",
     },
   });
 
@@ -42,7 +45,14 @@ export function PlatformForm({ onSuccess }: PlatformFormProps) {
       logoUrl: values.logoUrl || "",
     };
     
-    const result = await addPlatform(platformData);
+    let result;
+    
+    if (isEditing && platform) {
+      result = await updatePlatform({ ...platformData, id: platform.id });
+    } else {
+      result = await addPlatform(platformData);
+    }
+    
     if (result) {
       form.reset();
       queryClient.invalidateQueries({ queryKey: ['platforms'] });
@@ -92,7 +102,9 @@ export function PlatformForm({ onSuccess }: PlatformFormProps) {
             </FormItem>
           )}
         />
-        <Button type="submit" className="w-full">Add Platform</Button>
+        <Button type="submit" className="w-full">
+          {isEditing ? "Update Platform" : "Add Platform"}
+        </Button>
       </form>
     </Form>
   );

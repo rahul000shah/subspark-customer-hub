@@ -6,8 +6,9 @@ import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { addCustomer } from "@/services/customerService";
+import { addCustomer, updateCustomer } from "@/services/customerService";
 import { useQueryClient } from "@tanstack/react-query";
+import { Customer } from "@/types";
 
 const customerSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters" }),
@@ -19,19 +20,21 @@ const customerSchema = z.object({
 type CustomerFormValues = z.infer<typeof customerSchema>;
 
 type CustomerFormProps = {
+  customer?: Customer;
+  isEditing?: boolean;
   onSuccess?: () => void;
 };
 
-export function CustomerForm({ onSuccess }: CustomerFormProps) {
+export function CustomerForm({ customer, isEditing = false, onSuccess }: CustomerFormProps) {
   const queryClient = useQueryClient();
   
   const form = useForm<CustomerFormValues>({
     resolver: zodResolver(customerSchema),
     defaultValues: {
-      name: "",
-      email: "",
-      phone: "",
-      address: "",
+      name: customer?.name || "",
+      email: customer?.email || "",
+      phone: customer?.phone || "",
+      address: customer?.address || "",
     },
   });
 
@@ -44,7 +47,14 @@ export function CustomerForm({ onSuccess }: CustomerFormProps) {
       address: values.address || "",
     };
     
-    const result = await addCustomer(customerData);
+    let result;
+    
+    if (isEditing && customer) {
+      result = await updateCustomer({ ...customerData, id: customer.id, createdAt: customer.createdAt });
+    } else {
+      result = await addCustomer(customerData);
+    }
+    
     if (result) {
       form.reset();
       queryClient.invalidateQueries({ queryKey: ['customers'] });
@@ -107,7 +117,9 @@ export function CustomerForm({ onSuccess }: CustomerFormProps) {
             </FormItem>
           )}
         />
-        <Button type="submit" className="w-full">Add Customer</Button>
+        <Button type="submit" className="w-full">
+          {isEditing ? "Update Customer" : "Add Customer"}
+        </Button>
       </form>
     </Form>
   );

@@ -5,16 +5,19 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Search, Plus, Pencil, Trash2, Loader2 } from "lucide-react";
-import { getCustomers, deleteCustomer } from "@/services/customerService";
+import { getCustomers, deleteCustomer, updateCustomer } from "@/services/customerService";
 import { CustomerForm } from "@/components/customers/CustomerForm";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { format } from "date-fns";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Customer } from "@/types";
 
 const Customers = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [currentCustomer, setCurrentCustomer] = useState<Customer | null>(null);
   
   const { data: customers = [], isLoading, refetch } = useQuery({
     queryKey: ['customers'],
@@ -35,6 +38,11 @@ const Customers = () => {
     }
   };
 
+  const handleEdit = (customer: Customer) => {
+    setCurrentCustomer(customer);
+    setIsEditDialogOpen(true);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -53,7 +61,10 @@ const Customers = () => {
             <DialogHeader>
               <DialogTitle>Add New Customer</DialogTitle>
             </DialogHeader>
-            <CustomerForm onSuccess={() => setIsAddDialogOpen(false)} />
+            <CustomerForm onSuccess={() => {
+              setIsAddDialogOpen(false);
+              refetch();
+            }} />
           </DialogContent>
         </Dialog>
       </div>
@@ -96,6 +107,9 @@ const Customers = () => {
                       <TableCell>{customer.phone || "-"}</TableCell>
                       <TableCell>{format(new Date(customer.createdAt), "MMM dd, yyyy")}</TableCell>
                       <TableCell className="text-right space-x-1">
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEdit(customer)}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
                             <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive">
@@ -136,6 +150,25 @@ const Customers = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Edit Customer Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="sm:max-w-[475px]">
+          <DialogHeader>
+            <DialogTitle>Edit Customer</DialogTitle>
+          </DialogHeader>
+          {currentCustomer && (
+            <CustomerForm 
+              customer={currentCustomer}
+              isEditing={true}
+              onSuccess={() => {
+                setIsEditDialogOpen(false);
+                refetch();
+              }} 
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
