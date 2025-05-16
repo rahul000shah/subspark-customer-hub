@@ -1,12 +1,51 @@
 
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Search, Plus } from "lucide-react";
+import { Search, Plus, Loader2, Trash2 } from "lucide-react";
+import { getSubscriptionsWithDetails, deleteSubscription } from "@/services/subscriptionService";
+import { SubscriptionForm } from "@/components/subscriptions/SubscriptionForm";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
+import { format } from "date-fns";
+import { Badge } from "@/components/ui/badge";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 const Subscriptions = () => {
   const [searchQuery, setSearchQuery] = useState("");
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  
+  const { data: subscriptions = [], isLoading, refetch } = useQuery({
+    queryKey: ['subscriptions'],
+    queryFn: getSubscriptionsWithDetails
+  });
+
+  const filteredSubscriptions = subscriptions.filter(subscription => 
+    subscription.customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    subscription.platform.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    subscription.type.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    subscription.notes?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const getStatusColor = (status: string, expiryDate: string) => {
+    if (status === 'expired' || status === 'cancelled') return 'destructive';
+    
+    const now = new Date();
+    const expiry = new Date(expiryDate);
+    const daysUntilExpiry = Math.floor((expiry.getTime() - now.getTime()) / (1000 * 3600 * 24));
+    
+    if (daysUntilExpiry <= 7) return 'warning';
+    return 'success';
+  };
+
+  const handleDelete = async (id: string) => {
+    const success = await deleteSubscription(id);
+    if (success) {
+      refetch();
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -15,14 +54,25 @@ const Subscriptions = () => {
           <h1 className="text-3xl font-bold tracking-tight">Subscriptions</h1>
           <p className="text-muted-foreground">Manage your subscription database</p>
         </div>
-        <Button className="sm:w-auto">
-          <Plus className="mr-2 h-4 w-4" /> Add Subscription
-        </Button>
+        
+        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+          <DialogTrigger asChild>
+            <Button className="sm:w-auto">
+              <Plus className="mr-2 h-4 w-4" /> Add Subscription
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[600px]">
+            <DialogHeader>
+              <DialogTitle>Add New Subscription</DialogTitle>
+            </DialogHeader>
+            <SubscriptionForm onSuccess={() => setIsAddDialogOpen(false)} />
+          </DialogContent>
+        </Dialog>
       </div>
 
       <Card>
         <CardContent className="p-6">
-          <div className="relative">
+          <div className="relative mb-4">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               type="search"
@@ -32,17 +82,87 @@ const Subscriptions = () => {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
+          
+          {isLoading ? (
+            <div className="flex justify-center items-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <span className="ml-2">Loading subscriptions...</span>
+            </div>
+          ) : filteredSubscriptions.length > 0 ? (
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Customer</TableHead>
+                    <TableHead>Platform</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Cost</TableHead>
+                    <TableHead>Expires</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredSubscriptions.map((subscription) => {
+                    const statusColor = getStatusColor(subscription.status, subscription.expiryDate) as "default" | "destructive" | "success" | "warning";
+                    const daysUntilExpiry = Math.floor((new Date(subscription.expiryDate).getTime() - new Date().getTime()) / (1000 * 3600 * 24));
+                    
+                    return (
+                      <TableRow key={subscription.id}>
+                        <TableCell className="font-medium">{subscription.customer.name}</TableCell>
+                        <TableCell>{subscription.platform.name}</TableCell>
+                        <TableCell className="capitalize">{subscription.type}</TableCell>
+                        <TableCell>${parseFloat(subscription.cost.toString()).toFixed(2)}</TableCell>
+                        <TableCell>{format(new Date(subscription.expiryDate), "MMM dd, yyyy")}</TableCell>
+                        <TableCell>
+                          <Badge variant={statusColor}>
+                            {subscription.status === 'active' 
+                              ? `${daysUntilExpiry > 0 ? `${daysUntilExpiry} days` : 'Expires today'}` 
+                              : subscription.status.charAt(0).toUpperCase() + subscription.status.slice(1)}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive">
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Delete Subscription</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Are you sure you want to delete the {subscription.platform.name} subscription for {subscription.customer.name}? This action cannot be undone.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction 
+                                  className="bg-destructive text-destructive-foreground"
+                                  onClick={() => handleDelete(subscription.id)}
+                                >
+                                  Delete
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          ) : (
+            <div className="text-center py-10">
+              <h3 className="text-lg font-medium">No subscriptions found</h3>
+              <p className="text-muted-foreground mt-1">
+                {searchQuery ? "Try a different search term" : "Add your first subscription to get started"}
+              </p>
+            </div>
+          )}
         </CardContent>
       </Card>
-
-      <div className="flex items-center justify-center py-10">
-        <div className="text-center">
-          <h2 className="text-xl font-medium">Coming Soon</h2>
-          <p className="text-muted-foreground mt-1">
-            The subscriptions management page is under development
-          </p>
-        </div>
-      </div>
     </div>
   );
 };
