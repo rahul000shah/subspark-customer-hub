@@ -36,7 +36,15 @@ export function CustomerForm({ onSuccess }: CustomerFormProps) {
   });
 
   const onSubmit = async (values: CustomerFormValues) => {
-    const result = await addCustomer(values);
+    // Ensure all required fields are included
+    const customerData = {
+      name: values.name,
+      email: values.email,
+      phone: values.phone || "",
+      address: values.address || "",
+    };
+    
+    const result = await addCustomer(customerData);
     if (result) {
       form.reset();
       queryClient.invalidateQueries({ queryKey: ['customers'] });

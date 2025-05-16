@@ -35,7 +35,14 @@ export function PlatformForm({ onSuccess }: PlatformFormProps) {
   });
 
   const onSubmit = async (values: PlatformFormValues) => {
-    const result = await addPlatform(values);
+    // Ensure all required fields are included
+    const platformData = {
+      name: values.name,
+      description: values.description || "",
+      logoUrl: values.logoUrl || "",
+    };
+    
+    const result = await addPlatform(platformData);
     if (result) {
       form.reset();
       queryClient.invalidateQueries({ queryKey: ['platforms'] });

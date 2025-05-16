@@ -74,10 +74,16 @@ export function SubscriptionForm({ onSuccess }: SubscriptionFormProps) {
   });
 
   const onSubmit = async (values: SubscriptionFormValues) => {
+    // Ensure all required fields are included with correct types
     const subscription = {
-      ...values,
+      customerId: values.customerId,
+      platformId: values.platformId,
+      type: values.type,
       startDate: values.startDate.toISOString(),
       expiryDate: values.expiryDate.toISOString(),
+      cost: values.cost,
+      status: values.status,
+      notes: values.notes || "",
     };
     
     const result = await addSubscription(subscription);

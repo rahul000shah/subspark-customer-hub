@@ -58,8 +58,7 @@ const Dashboard = () => {
       platform: sub.platform.name,
       customer: sub.customer.name,
       cost: parseFloat(sub.cost.toString())
-    }))
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    }));
 
   return (
     <div className="space-y-8">

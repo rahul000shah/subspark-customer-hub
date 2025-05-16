@@ -8,12 +8,28 @@ interface PlatformData {
   color: string;
 }
 
+interface PlatformInfo {
+  name: string;
+  count: number;
+  revenue: number;
+}
+
 interface TopPlatformsProps {
-  data: PlatformData[];
+  platforms: PlatformInfo[];
   isLoading?: boolean;
 }
 
-const TopPlatforms = ({ data, isLoading = false }: TopPlatformsProps) => {
+// Array of colors for the pie chart
+const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
+
+const TopPlatforms = ({ platforms, isLoading = false }: TopPlatformsProps) => {
+  // Convert platform data to the format expected by recharts
+  const data: PlatformData[] = platforms.map((platform, index) => ({
+    name: platform.name,
+    value: platform.revenue,
+    color: COLORS[index % COLORS.length],
+  }));
+
   if (isLoading) {
     return (
       <Card>
@@ -63,6 +79,7 @@ const TopPlatforms = ({ data, isLoading = false }: TopPlatformsProps) => {
                   borderRadius: '8px',
                   boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
                 }}
+                formatter={(value) => [`$${value}`, 'Revenue']}
               />
               <Legend align="center" verticalAlign="bottom" layout="horizontal" />
             </PieChart>

@@ -1,18 +1,40 @@
 
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { format } from "date-fns";
 
 interface ExpiryData {
   name: string;
   count: number;
 }
 
+interface RawExpiryData {
+  date: string;
+  platform: string;
+  customer: string;
+  cost: number;
+}
+
 interface ExpiryChartProps {
-  data: ExpiryData[];
+  data: RawExpiryData[];
   isLoading?: boolean;
 }
 
 const ExpiryChart = ({ data, isLoading = false }: ExpiryChartProps) => {
+  // Process raw expiry data into chart format
+  const processedData: ExpiryData[] = data.reduce((acc: ExpiryData[], curr) => {
+    const date = format(new Date(curr.date), 'MMM dd');
+    const existingDateIndex = acc.findIndex(item => item.name === date);
+    
+    if (existingDateIndex >= 0) {
+      acc[existingDateIndex].count += 1;
+    } else {
+      acc.push({ name: date, count: 1 });
+    }
+    
+    return acc;
+  }, []);
+
   if (isLoading) {
     return (
       <Card>
@@ -32,13 +54,13 @@ const ExpiryChart = ({ data, isLoading = false }: ExpiryChartProps) => {
         <CardTitle>Upcoming Expiries</CardTitle>
       </CardHeader>
       <CardContent className="px-2">
-        {data.length === 0 ? (
+        {processedData.length === 0 ? (
           <div className="flex h-80 items-center justify-center text-muted-foreground">
             No data available
           </div>
         ) : (
           <ResponsiveContainer width="100%" height={320}>
-            <BarChart data={data}>
+            <BarChart data={processedData}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} />
               <XAxis dataKey="name" />
               <YAxis allowDecimals={false} />
