@@ -71,6 +71,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
+      // Fix: Correctly accessing user from the response
       if (data && data.user) {
         setUser(data.user);
         navigate('/');

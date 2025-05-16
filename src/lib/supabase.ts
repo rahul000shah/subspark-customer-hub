@@ -1,15 +1,10 @@
 
 import { createClient } from '@supabase/supabase-js';
 import { toast } from '@/hooks/use-toast';
+import { supabase as supabaseClient } from '@/integrations/supabase/client';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.error('Missing Supabase credentials');
-}
-
-export const supabase = createClient(supabaseUrl || '', supabaseAnonKey || '');
+// Use the already configured supabase client from the integrations folder
+export const supabase = supabaseClient;
 
 export const signIn = async (email: string, password: string) => {
   try {
