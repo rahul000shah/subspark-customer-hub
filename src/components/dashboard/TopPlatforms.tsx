@@ -2,12 +2,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PieChart, Pie, ResponsiveContainer, Cell, Legend, Tooltip } from "recharts";
 
-interface PlatformData {
-  name: string;
-  value: number;
-  color: string;
-}
-
 interface PlatformInfo {
   name: string;
   count: number;
@@ -24,7 +18,7 @@ const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
 
 const TopPlatforms = ({ platforms, isLoading = false }: TopPlatformsProps) => {
   // Convert platform data to the format expected by recharts
-  const data: PlatformData[] = platforms.map((platform, index) => ({
+  const data = platforms.map((platform, index) => ({
     name: platform.name,
     value: platform.revenue,
     color: COLORS[index % COLORS.length],

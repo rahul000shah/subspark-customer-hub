@@ -1,88 +1,103 @@
 
-import { useState } from "react";
-import { Card } from "@/components/ui/card";
-import DashboardMetrics from "@/components/dashboard/DashboardMetrics";
-import ExpiryChart from "@/components/dashboard/ExpiryChart";
-import RecentSubscriptions from "@/components/dashboard/RecentSubscriptions";
-import TopPlatforms from "@/components/dashboard/TopPlatforms";
-import { TimeFrame } from "@/types";
-import { useSubscriptionStats } from "@/hooks/useSubscriptionStats";
-import { useQuery } from "@tanstack/react-query";
-import { getSubscriptionsWithDetails } from "@/services/subscriptionService";
+import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { getSubscriptionsWithDetails } from '@/services/subscriptionService';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import DashboardMetrics from '@/components/dashboard/DashboardMetrics';
+import ExpiryChart from '@/components/dashboard/ExpiryChart';
+import TopPlatforms from '@/components/dashboard/TopPlatforms';
+import RecentSubscriptions from '@/components/dashboard/RecentSubscriptions';
+import { TimeFrame } from '@/types';
+import { addDays, format } from 'date-fns';
 
 const Dashboard = () => {
-  const [timeFrame, setTimeFrame] = useState<TimeFrame>("30days");
-  const { stats, isLoading: statsLoading } = useSubscriptionStats(timeFrame);
-  
-  const { data: subscriptionsWithDetails = [], isLoading: subscriptionsLoading } = useQuery({
+  const [timeFrame, setTimeFrame] = useState<TimeFrame>('30days');
+
+  const { data: subscriptions = [], isLoading } = useQuery({
     queryKey: ['subscriptions'],
     queryFn: getSubscriptionsWithDetails
   });
 
-  // Get top 10 recent subscriptions
-  const recentSubscriptions = [...subscriptionsWithDetails]
-    .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())
-    .slice(0, 10);
+  // Calculate dashboard stats
+  const stats = {
+    totalCustomers: [...new Set(subscriptions.map(sub => sub.customerId))].length,
+    activeSubscriptions: subscriptions.filter(sub => sub.status === 'active').length,
+    upcomingExpiries: subscriptions.filter(sub => {
+      const expiry = new Date(sub.expiryDate);
+      const now = new Date();
+      const daysDiff = Math.floor((expiry.getTime() - now.getTime()) / (1000 * 3600 * 24));
+      return daysDiff >= 0 && daysDiff <= 30;
+    }).length,
+    totalRevenue: subscriptions.reduce((total, sub) => total + Number(sub.cost), 0)
+  };
 
-  // Calculate subscription data for platforms
-  const platformData = subscriptionsWithDetails.reduce((acc, sub) => {
-    const platform = sub.platform.name;
-    if (!acc[platform]) {
-      acc[platform] = {
-        name: platform,
-        count: 0,
-        revenue: 0
-      };
-    }
-    acc[platform].count += 1;
-    acc[platform].revenue += parseFloat(sub.cost.toString());
-    return acc;
-  }, {} as Record<string, { name: string; count: number; revenue: number }>);
-
-  const topPlatforms = Object.values(platformData)
-    .sort((a, b) => b.revenue - a.revenue)
-    .slice(0, 5);
-
-  // Calculate expiry data for chart
-  const now = new Date();
-  const oneMonthLater = new Date();
-  oneMonthLater.setMonth(now.getMonth() + 1);
-  
-  const expiryData = subscriptionsWithDetails
+  // Get upcoming expiries for chart
+  const upcomingExpiries = subscriptions
     .filter(sub => {
-      const expiryDate = new Date(sub.expiryDate);
-      return sub.status === 'active' && expiryDate >= now && expiryDate <= oneMonthLater;
+      const expiry = new Date(sub.expiryDate);
+      const now = new Date();
+      const daysDiff = Math.floor((expiry.getTime() - now.getTime()) / (1000 * 3600 * 24));
+      return daysDiff >= 0 && daysDiff <= 30;
     })
     .map(sub => ({
       date: sub.expiryDate,
       platform: sub.platform.name,
       customer: sub.customer.name,
-      cost: parseFloat(sub.cost.toString())
+      cost: Number(sub.cost)
     }));
+
+  // Calculate top platforms by revenue and subscription count
+  const platformStats = subscriptions.reduce((acc: Record<string, { name: string; count: number; revenue: number }>, sub) => {
+    const { platform, cost } = sub;
+    if (!acc[platform.id]) {
+      acc[platform.id] = {
+        name: platform.name,
+        count: 0,
+        revenue: 0
+      };
+    }
+    acc[platform.id].count += 1;
+    acc[platform.id].revenue += Number(cost);
+    return acc;
+  }, {});
+
+  const topPlatforms = Object.values(platformStats)
+    .sort((a, b) => b.revenue - a.revenue)
+    .slice(0, 5);
+
+  // Get recent subscriptions
+  const recentSubscriptions = [...subscriptions]
+    .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())
+    .slice(0, 5);
 
   return (
     <div className="space-y-8">
-      <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-
+      <div>
+        <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
+        <p className="text-muted-foreground">Monitor your subscription service performance</p>
+      </div>
+      
       <DashboardMetrics 
         stats={stats} 
-        isLoading={statsLoading} 
+        isLoading={isLoading}
         timeFrame={timeFrame}
         onTimeFrameChange={setTimeFrame}
       />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card className="p-6">
-          <ExpiryChart data={expiryData} isLoading={subscriptionsLoading} />
-        </Card>
-        <Card className="p-6">
-          <TopPlatforms platforms={topPlatforms} isLoading={subscriptionsLoading} />
-        </Card>
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
+        <ExpiryChart 
+          data={upcomingExpiries} 
+          isLoading={isLoading} 
+        />
+        <TopPlatforms 
+          platforms={topPlatforms} 
+          isLoading={isLoading} 
+        />
       </div>
-
+      
       <RecentSubscriptions 
-        subscriptions={recentSubscriptions}
-        isLoading={subscriptionsLoading}
+        subscriptions={recentSubscriptions} 
+        isLoading={isLoading} 
       />
     </div>
   );
