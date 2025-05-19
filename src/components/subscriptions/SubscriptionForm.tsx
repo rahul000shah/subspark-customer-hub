@@ -6,7 +6,7 @@ import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { addSubscription } from "@/services/subscriptionService";
+import { addSubscription, updateSubscription } from "@/services/subscriptionService";
 import { getCustomers } from "@/services/customerService";
 import { getPlatforms } from "@/services/platformService";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -17,6 +17,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { cn } from "@/lib/utils";
 import { CalendarIcon } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
+import { Subscription, Platform, Customer } from "@/types";
 
 const subscriptionSchema = z.object({
   customerId: z.string().uuid({ message: "Please select a customer" }),
@@ -42,9 +43,11 @@ type SubscriptionFormValues = z.infer<typeof subscriptionSchema>;
 
 type SubscriptionFormProps = {
   onSuccess?: () => void;
+  subscription?: Subscription & { platform: Platform; customer: Customer };
+  isEditing?: boolean;
 };
 
-export function SubscriptionForm({ onSuccess }: SubscriptionFormProps) {
+export function SubscriptionForm({ onSuccess, subscription, isEditing = false }: SubscriptionFormProps) {
   const queryClient = useQueryClient();
   
   const { data: customers = [] } = useQuery({
@@ -62,20 +65,20 @@ export function SubscriptionForm({ onSuccess }: SubscriptionFormProps) {
   const form = useForm<SubscriptionFormValues>({
     resolver: zodResolver(subscriptionSchema),
     defaultValues: {
-      customerId: "",
-      platformId: "",
-      type: "subscription",
-      startDate: new Date(),
-      expiryDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
-      cost: 0,
-      status: "active",
-      notes: "",
+      customerId: subscription?.customerId || "",
+      platformId: subscription?.platformId || "",
+      type: (subscription?.type as "subscription" | "giftcard") || "subscription",
+      startDate: subscription?.startDate ? new Date(subscription.startDate) : new Date(),
+      expiryDate: subscription?.expiryDate ? new Date(subscription.expiryDate) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
+      cost: subscription?.cost || 0,
+      status: (subscription?.status as "active" | "expired" | "cancelled") || "active",
+      notes: subscription?.notes || "",
     },
   });
 
   const onSubmit = async (values: SubscriptionFormValues) => {
     // Ensure all required fields are included with correct types
-    const subscription = {
+    const subscriptionData = {
       customerId: values.customerId,
       platformId: values.platformId,
       type: values.type,
@@ -86,7 +89,13 @@ export function SubscriptionForm({ onSuccess }: SubscriptionFormProps) {
       notes: values.notes || "",
     };
     
-    const result = await addSubscription(subscription);
+    let result;
+    if (isEditing && subscription) {
+      result = await updateSubscription(subscription.id, subscriptionData);
+    } else {
+      result = await addSubscription(subscriptionData);
+    }
+
     if (result) {
       form.reset();
       queryClient.invalidateQueries({ queryKey: ['subscriptions'] });
@@ -300,7 +309,7 @@ export function SubscriptionForm({ onSuccess }: SubscriptionFormProps) {
           )}
         />
         
-        <Button type="submit" className="w-full">Add Subscription</Button>
+        <Button type="submit" className="w-full">{isEditing ? "Update" : "Add"} Subscription</Button>
       </form>
     </Form>
   );
