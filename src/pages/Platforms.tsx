@@ -18,6 +18,7 @@ const Platforms = () => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [currentPlatform, setCurrentPlatform] = useState<Platform | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [deletingPlatformId, setDeletingPlatformId] = useState<string | null>(null);
   
   const { data: platforms = [], isLoading, refetch } = useQuery({
     queryKey: ['platforms'],
@@ -31,13 +32,15 @@ const Platforms = () => {
 
   const handleDelete = async (id: string, name: string) => {
     setIsDeleting(true);
+    setDeletingPlatformId(id);
+    
     try {
       console.log(`Starting deletion of platform: ${name} (${id})`);
       const success = await deletePlatform(id, name);
       
       if (success) {
         console.log(`Platform ${name} deleted successfully`);
-        await refetch();
+        await refetch(); // Refresh the data after successful deletion
       } else {
         console.error(`Failed to delete platform ${name}`);
       }
@@ -45,6 +48,7 @@ const Platforms = () => {
       console.error("Error in handleDelete:", error);
     } finally {
       setIsDeleting(false);
+      setDeletingPlatformId(null);
     }
   };
   
@@ -148,9 +152,10 @@ const Platforms = () => {
                               <AlertDialogAction 
                                 className="bg-destructive text-destructive-foreground"
                                 onClick={() => handleDelete(platform.id, platform.name)}
-                                disabled={isDeleting}
+                                disabled={isDeleting && deletingPlatformId === platform.id}
                               >
-                                {isDeleting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                                {isDeleting && deletingPlatformId === platform.id ? 
+                                  <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
                                 Delete
                               </AlertDialogAction>
                             </AlertDialogFooter>

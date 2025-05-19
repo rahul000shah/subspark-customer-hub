@@ -19,6 +19,7 @@ const Customers = () => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [currentCustomer, setCurrentCustomer] = useState<Customer | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [deletingCustomerId, setDeletingCustomerId] = useState<string | null>(null);
   
   const { data: customers = [], isLoading, refetch } = useQuery({
     queryKey: ['customers'],
@@ -34,13 +35,15 @@ const Customers = () => {
 
   const handleDelete = async (id: string, name: string) => {
     setIsDeleting(true);
+    setDeletingCustomerId(id);
+    
     try {
       console.log(`Starting deletion of customer: ${name} (${id})`);
       const success = await deleteCustomer(id, name);
       
       if (success) {
         console.log(`Customer ${name} deleted successfully`);
-        await refetch();
+        await refetch(); // Refresh the data after successful deletion
       } else {
         console.error(`Failed to delete customer ${name}`);
       }
@@ -48,6 +51,7 @@ const Customers = () => {
       console.error("Error in handleDelete:", error);
     } finally {
       setIsDeleting(false);
+      setDeletingCustomerId(null);
     }
   };
 
@@ -141,9 +145,10 @@ const Customers = () => {
                               <AlertDialogAction 
                                 className="bg-destructive text-destructive-foreground"
                                 onClick={() => handleDelete(customer.id, customer.name)}
-                                disabled={isDeleting}
+                                disabled={isDeleting && deletingCustomerId === customer.id}
                               >
-                                {isDeleting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                                {isDeleting && deletingCustomerId === customer.id ? 
+                                  <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
                                 Delete
                               </AlertDialogAction>
                             </AlertDialogFooter>

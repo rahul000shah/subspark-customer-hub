@@ -94,7 +94,26 @@ export async function updatePlatform(platform: Platform): Promise<boolean> {
 
 export async function deletePlatform(id: string, name: string): Promise<boolean> {
   try {
+    console.log(`Starting platform deletion process for ID: ${id}, name: ${name}`);
+    
+    // First, check if the platform exists
+    const { data: platformData, error: checkError } = await supabase
+      .from('platforms')
+      .select('id')
+      .eq('id', id)
+      .single();
+    
+    if (checkError) {
+      console.error("Error checking platform existence:", checkError);
+      throw new Error(`Platform not found: ${checkError.message}`);
+    }
+    
+    if (!platformData) {
+      throw new Error("Platform doesn't exist or was already deleted");
+    }
+    
     // First, delete related subscriptions
+    console.log(`Deleting subscriptions related to platform ID: ${id}`);
     const { error: subscriptionError } = await supabase
       .from('subscriptions')
       .delete()
@@ -106,6 +125,7 @@ export async function deletePlatform(id: string, name: string): Promise<boolean>
     }
     
     // Then delete the platform
+    console.log(`Deleting platform with ID: ${id}`);
     const { error } = await supabase
       .from('platforms')
       .delete()
@@ -115,6 +135,8 @@ export async function deletePlatform(id: string, name: string): Promise<boolean>
       console.error("Error deleting platform:", error);
       throw new Error(`Platform deletion failed: ${error.message}`);
     }
+    
+    console.log(`Platform ${id} (${name}) deleted successfully`);
     
     toast({
       title: "Platform deleted",

@@ -162,7 +162,26 @@ export async function updateSubscription(subscription: Subscription): Promise<bo
 
 export async function deleteSubscription(id: string): Promise<boolean> {
   try {
-    // Delete the subscription directly
+    console.log(`Starting subscription deletion process for ID: ${id}`);
+    
+    // First, check if the subscription exists
+    const { data: subscriptionData, error: checkError } = await supabase
+      .from('subscriptions')
+      .select('id')
+      .eq('id', id)
+      .single();
+    
+    if (checkError) {
+      console.error("Error checking subscription existence:", checkError);
+      throw new Error(`Subscription not found: ${checkError.message}`);
+    }
+    
+    if (!subscriptionData) {
+      throw new Error("Subscription doesn't exist or was already deleted");
+    }
+    
+    // Delete the subscription
+    console.log(`Deleting subscription with ID: ${id}`);
     const { error } = await supabase
       .from('subscriptions')
       .delete()
@@ -172,6 +191,8 @@ export async function deleteSubscription(id: string): Promise<boolean> {
       console.error("Error deleting subscription:", error);
       throw new Error(`Subscription deletion failed: ${error.message}`);
     }
+    
+    console.log(`Subscription ${id} deleted successfully`);
     
     toast({
       title: "Subscription deleted",

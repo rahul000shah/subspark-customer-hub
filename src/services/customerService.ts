@@ -100,7 +100,26 @@ export async function updateCustomer(customer: Customer): Promise<boolean> {
 
 export async function deleteCustomer(id: string, name: string): Promise<boolean> {
   try {
+    console.log(`Starting customer deletion process for ID: ${id}, name: ${name}`);
+    
+    // First, check if the customer exists
+    const { data: customerData, error: checkError } = await supabase
+      .from('customers')
+      .select('id')
+      .eq('id', id)
+      .single();
+    
+    if (checkError) {
+      console.error("Error checking customer existence:", checkError);
+      throw new Error(`Customer not found: ${checkError.message}`);
+    }
+    
+    if (!customerData) {
+      throw new Error("Customer doesn't exist or was already deleted");
+    }
+    
     // First, delete related subscriptions
+    console.log(`Deleting subscriptions related to customer ID: ${id}`);
     const { error: subscriptionError } = await supabase
       .from('subscriptions')
       .delete()
@@ -112,6 +131,7 @@ export async function deleteCustomer(id: string, name: string): Promise<boolean>
     }
     
     // Then delete the customer
+    console.log(`Deleting customer with ID: ${id}`);
     const { error } = await supabase
       .from('customers')
       .delete()
@@ -121,6 +141,8 @@ export async function deleteCustomer(id: string, name: string): Promise<boolean>
       console.error("Error deleting customer:", error);
       throw new Error(`Customer deletion failed: ${error.message}`);
     }
+    
+    console.log(`Customer ${id} (${name}) deleted successfully`);
     
     toast({
       title: "Customer deleted",

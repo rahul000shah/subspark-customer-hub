@@ -20,6 +20,7 @@ const Subscriptions = () => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [currentSubscription, setCurrentSubscription] = useState<(Subscription & { platform: Platform; customer: Customer }) | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [deletingSubscriptionId, setDeletingSubscriptionId] = useState<string | null>(null);
   
   const { data: subscriptions = [], isLoading, refetch } = useQuery({
     queryKey: ['subscriptions'],
@@ -46,13 +47,15 @@ const Subscriptions = () => {
 
   const handleDelete = async (id: string) => {
     setIsDeleting(true);
+    setDeletingSubscriptionId(id);
+    
     try {
       console.log(`Starting deletion of subscription with id: ${id}`);
       const success = await deleteSubscription(id);
       
       if (success) {
         console.log(`Subscription deleted successfully`);
-        await refetch();
+        await refetch(); // Refresh the data after successful deletion
       } else {
         console.error(`Failed to delete subscription`);
       }
@@ -60,6 +63,7 @@ const Subscriptions = () => {
       console.error("Error in handleDelete:", error);
     } finally {
       setIsDeleting(false);
+      setDeletingSubscriptionId(null);
     }
   };
 
@@ -167,9 +171,10 @@ const Subscriptions = () => {
                                 <AlertDialogAction 
                                   className="bg-destructive text-destructive-foreground"
                                   onClick={() => handleDelete(subscription.id)}
-                                  disabled={isDeleting}
+                                  disabled={isDeleting && deletingSubscriptionId === subscription.id}
                                 >
-                                  {isDeleting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                                  {isDeleting && deletingSubscriptionId === subscription.id ? 
+                                    <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
                                   Delete
                                 </AlertDialogAction>
                               </AlertDialogFooter>
