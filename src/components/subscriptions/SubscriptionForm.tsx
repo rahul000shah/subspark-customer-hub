@@ -91,7 +91,11 @@ export function SubscriptionForm({ onSuccess, subscription, isEditing = false }:
     
     let result;
     if (isEditing && subscription) {
-      result = await updateSubscription(subscription.id, subscriptionData);
+      // Fix: Pass the subscription data as a complete object with id included
+      result = await updateSubscription({
+        id: subscription.id,
+        ...subscriptionData
+      });
     } else {
       result = await addSubscription(subscriptionData);
     }
