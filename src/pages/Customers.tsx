@@ -1,10 +1,11 @@
+
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Search, Plus, Pencil, Trash2, Loader2 } from "lucide-react";
-import { getCustomers, deleteCustomer, updateCustomer } from "@/services/customerService";
+import { getCustomers, deleteCustomer } from "@/services/customerService";
 import { CustomerForm } from "@/components/customers/CustomerForm";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
@@ -17,6 +18,7 @@ const Customers = () => {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [currentCustomer, setCurrentCustomer] = useState<Customer | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   
   const { data: customers = [], isLoading, refetch } = useQuery({
     queryKey: ['customers'],
@@ -31,12 +33,21 @@ const Customers = () => {
   );
 
   const handleDelete = async (id: string, name: string) => {
-    console.log(`Initiating deletion of customer: ${name} (${id})`);
-    const success = await deleteCustomer(id, name);
-    console.log(`Customer deletion ${success ? 'successful' : 'failed'}`);
-    
-    if (success) {
-      await refetch();
+    setIsDeleting(true);
+    try {
+      console.log(`Starting deletion of customer: ${name} (${id})`);
+      const success = await deleteCustomer(id, name);
+      
+      if (success) {
+        console.log(`Customer ${name} deleted successfully`);
+        await refetch();
+      } else {
+        console.error(`Failed to delete customer ${name}`);
+      }
+    } catch (error) {
+      console.error("Error in handleDelete:", error);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -130,7 +141,9 @@ const Customers = () => {
                               <AlertDialogAction 
                                 className="bg-destructive text-destructive-foreground"
                                 onClick={() => handleDelete(customer.id, customer.name)}
+                                disabled={isDeleting}
                               >
+                                {isDeleting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
                                 Delete
                               </AlertDialogAction>
                             </AlertDialogFooter>

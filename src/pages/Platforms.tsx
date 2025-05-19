@@ -1,10 +1,11 @@
+
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Search, Plus, Loader2, Trash2, Pencil } from "lucide-react";
-import { getPlatforms, deletePlatform, updatePlatform } from "@/services/platformService";
+import { getPlatforms, deletePlatform } from "@/services/platformService";
 import { PlatformForm } from "@/components/platforms/PlatformForm";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
@@ -16,6 +17,7 @@ const Platforms = () => {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [currentPlatform, setCurrentPlatform] = useState<Platform | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   
   const { data: platforms = [], isLoading, refetch } = useQuery({
     queryKey: ['platforms'],
@@ -28,12 +30,21 @@ const Platforms = () => {
   );
 
   const handleDelete = async (id: string, name: string) => {
-    console.log(`Initiating deletion of platform: ${name} (${id})`);
-    const success = await deletePlatform(id, name);
-    console.log(`Platform deletion ${success ? 'successful' : 'failed'}`);
-    
-    if (success) {
-      await refetch();
+    setIsDeleting(true);
+    try {
+      console.log(`Starting deletion of platform: ${name} (${id})`);
+      const success = await deletePlatform(id, name);
+      
+      if (success) {
+        console.log(`Platform ${name} deleted successfully`);
+        await refetch();
+      } else {
+        console.error(`Failed to delete platform ${name}`);
+      }
+    } catch (error) {
+      console.error("Error in handleDelete:", error);
+    } finally {
+      setIsDeleting(false);
     }
   };
   
@@ -137,7 +148,9 @@ const Platforms = () => {
                               <AlertDialogAction 
                                 className="bg-destructive text-destructive-foreground"
                                 onClick={() => handleDelete(platform.id, platform.name)}
+                                disabled={isDeleting}
                               >
+                                {isDeleting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
                                 Delete
                               </AlertDialogAction>
                             </AlertDialogFooter>

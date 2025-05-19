@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
@@ -18,6 +19,7 @@ const Subscriptions = () => {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [currentSubscription, setCurrentSubscription] = useState<(Subscription & { platform: Platform; customer: Customer }) | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   
   const { data: subscriptions = [], isLoading, refetch } = useQuery({
     queryKey: ['subscriptions'],
@@ -43,12 +45,21 @@ const Subscriptions = () => {
   };
 
   const handleDelete = async (id: string) => {
-    console.log(`Initiating deletion of subscription with id: ${id}`);
-    const success = await deleteSubscription(id);
-    console.log(`Subscription deletion ${success ? 'successful' : 'failed'}`);
-    
-    if (success) {
-      await refetch();
+    setIsDeleting(true);
+    try {
+      console.log(`Starting deletion of subscription with id: ${id}`);
+      const success = await deleteSubscription(id);
+      
+      if (success) {
+        console.log(`Subscription deleted successfully`);
+        await refetch();
+      } else {
+        console.error(`Failed to delete subscription`);
+      }
+    } catch (error) {
+      console.error("Error in handleDelete:", error);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -156,7 +167,9 @@ const Subscriptions = () => {
                                 <AlertDialogAction 
                                   className="bg-destructive text-destructive-foreground"
                                   onClick={() => handleDelete(subscription.id)}
+                                  disabled={isDeleting}
                                 >
+                                  {isDeleting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
                                   Delete
                                 </AlertDialogAction>
                               </AlertDialogFooter>
