@@ -100,6 +100,15 @@ export async function updateCustomer(customer: Customer): Promise<boolean> {
 
 export async function deleteCustomer(id: string, name: string): Promise<boolean> {
   try {
+    // First, delete related subscriptions
+    const { error: subscriptionError } = await supabase
+      .from('subscriptions')
+      .delete()
+      .eq('customer_id', id);
+    
+    if (subscriptionError) throw subscriptionError;
+    
+    // Then delete the customer
     const { error } = await supabase
       .from('customers')
       .delete()

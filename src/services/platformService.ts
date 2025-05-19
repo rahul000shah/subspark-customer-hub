@@ -94,6 +94,15 @@ export async function updatePlatform(platform: Platform): Promise<boolean> {
 
 export async function deletePlatform(id: string, name: string): Promise<boolean> {
   try {
+    // First, delete related subscriptions
+    const { error: subscriptionError } = await supabase
+      .from('subscriptions')
+      .delete()
+      .eq('platform_id', id);
+    
+    if (subscriptionError) throw subscriptionError;
+    
+    // Then delete the platform
     const { error } = await supabase
       .from('platforms')
       .delete()
