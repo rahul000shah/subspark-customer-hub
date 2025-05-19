@@ -100,13 +100,20 @@ export async function updateCustomer(customer: Customer): Promise<boolean> {
 
 export async function deleteCustomer(id: string, name: string): Promise<boolean> {
   try {
+    console.log(`Attempting to delete customer with id: ${id}`);
+    
     // First, delete related subscriptions
     const { error: subscriptionError } = await supabase
       .from('subscriptions')
       .delete()
       .eq('customer_id', id);
     
-    if (subscriptionError) throw subscriptionError;
+    if (subscriptionError) {
+      console.error("Error deleting related subscriptions:", subscriptionError);
+      throw subscriptionError;
+    }
+    
+    console.log("Related subscriptions deleted successfully");
     
     // Then delete the customer
     const { error } = await supabase
@@ -114,7 +121,12 @@ export async function deleteCustomer(id: string, name: string): Promise<boolean>
       .delete()
       .eq('id', id);
     
-    if (error) throw error;
+    if (error) {
+      console.error("Error deleting customer:", error);
+      throw error;
+    }
+    
+    console.log("Customer deleted successfully");
     
     toast({
       title: "Customer deleted",
@@ -123,6 +135,7 @@ export async function deleteCustomer(id: string, name: string): Promise<boolean>
     
     return true;
   } catch (error: any) {
+    console.error("Delete customer error:", error);
     toast({
       title: "Error deleting customer",
       description: error.message,

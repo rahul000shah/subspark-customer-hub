@@ -162,12 +162,19 @@ export async function updateSubscription(subscription: Subscription): Promise<bo
 
 export async function deleteSubscription(id: string): Promise<boolean> {
   try {
+    console.log(`Attempting to delete subscription with id: ${id}`);
+    
     const { error } = await supabase
       .from('subscriptions')
       .delete()
       .eq('id', id);
     
-    if (error) throw error;
+    if (error) {
+      console.error("Error deleting subscription:", error);
+      throw error;
+    }
+    
+    console.log("Subscription deleted successfully");
     
     toast({
       title: "Subscription deleted",
@@ -176,6 +183,7 @@ export async function deleteSubscription(id: string): Promise<boolean> {
     
     return true;
   } catch (error: any) {
+    console.error("Delete subscription error:", error);
     toast({
       title: "Error deleting subscription",
       description: error.message,
