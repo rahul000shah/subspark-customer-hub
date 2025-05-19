@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
@@ -32,9 +31,12 @@ const Customers = () => {
   );
 
   const handleDelete = async (id: string, name: string) => {
+    console.log(`Initiating deletion of customer: ${name} (${id})`);
     const success = await deleteCustomer(id, name);
+    console.log(`Customer deletion ${success ? 'successful' : 'failed'}`);
+    
     if (success) {
-      refetch();
+      await refetch();
     }
   };
 

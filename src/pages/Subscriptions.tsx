@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
@@ -44,9 +43,12 @@ const Subscriptions = () => {
   };
 
   const handleDelete = async (id: string) => {
+    console.log(`Initiating deletion of subscription with id: ${id}`);
     const success = await deleteSubscription(id);
+    console.log(`Subscription deletion ${success ? 'successful' : 'failed'}`);
+    
     if (success) {
-      refetch();
+      await refetch();
     }
   };
 

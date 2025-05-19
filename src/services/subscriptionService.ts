@@ -164,6 +164,24 @@ export async function deleteSubscription(id: string): Promise<boolean> {
   try {
     console.log(`Attempting to delete subscription with id: ${id}`);
     
+    // First, check if the subscription exists
+    const { data: subscriptionExists, error: checkError } = await supabase
+      .from('subscriptions')
+      .select('id')
+      .eq('id', id)
+      .single();
+      
+    if (checkError) {
+      console.error("Error checking if subscription exists:", checkError);
+      throw new Error(`Subscription check failed: ${checkError.message}`);
+    }
+    
+    if (!subscriptionExists) {
+      console.error("Subscription not found:", id);
+      throw new Error("Subscription not found");
+    }
+    
+    // Delete the subscription
     const { error } = await supabase
       .from('subscriptions')
       .delete()
@@ -171,7 +189,7 @@ export async function deleteSubscription(id: string): Promise<boolean> {
     
     if (error) {
       console.error("Error deleting subscription:", error);
-      throw error;
+      throw new Error(`Subscription deletion failed: ${error.message}`);
     }
     
     console.log("Subscription deleted successfully");

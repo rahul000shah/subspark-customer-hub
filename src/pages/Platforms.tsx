@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
@@ -29,9 +28,12 @@ const Platforms = () => {
   );
 
   const handleDelete = async (id: string, name: string) => {
+    console.log(`Initiating deletion of platform: ${name} (${id})`);
     const success = await deletePlatform(id, name);
+    console.log(`Platform deletion ${success ? 'successful' : 'failed'}`);
+    
     if (success) {
-      refetch();
+      await refetch();
     }
   };
   
